@@ -7,6 +7,13 @@ HyperDex 소프트웨어 스택 - "개발자는 Python API로 instruction block�
 
 ## 구조
 
+```mermaid
+flowchart LR
+    IR["ir.py<br/>심볼릭 IR"] --> BL["blocks.py<br/>instruction block API<br/>(Library Engineer 레벨)"]
+    BL --> CP["compiler.py<br/>linear-scan 레지스터 할당<br/>(Compiler팀 레벨)"]
+    CP --> MN["main.py<br/>바이너리 (레지스터 배정된 명령어)"]
+```
+
 ```
 ir.py       - 심볼릭 IR (Instr, Program). 레지스터 개념이 아직 없음.
 blocks.py   - "instruction block" API. mlp_block, group_quant_block처럼
@@ -26,6 +33,23 @@ python3 main.py
 (순수 Python, GPU/CUDA 불필요)
 
 ## 무엇을 보여주는가
+
+```mermaid
+flowchart TB
+    subgraph S1["1단계: 심볼릭"]
+        s1["x_1, w1, w2"]
+        s2["ffn_h_1 = MATMUL(x_1, w1)"]
+    end
+    subgraph S2["2단계: 레지스터 6개 → 컴파일 성공"]
+        a1["r0=x_1, r1=w1, r2=w2"]
+        a2["r3 = MATMUL(r0, r1)<br/>(죽은 값의 레지스터 즉시 재사용)"]
+    end
+    subgraph S3["3단계: 레지스터 2개 → 컴파일 실패"]
+        f1["x, w1, w2 동시 생존 필요<br/>→ 자리 부족, spill 미구현 → 에러"]
+    end
+    S1 --> S2
+    S1 --> S3
+```
 
 1. **1단계 출력**: `x_1`, `ffn_h_1` 같은 심볼릭 이름으로 된 명령어 시퀀스.
    이게 Compute Library Engineer가 실제로 짜는 레벨 — Triton 커널을 `tl.load`/`tl.max`로
